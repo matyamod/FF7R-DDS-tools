@@ -10,7 +10,7 @@ BYTE_PER_PIXEL = {
     'BC6H(unsigned)': 1,
     'BC6H(signed)': 1,
     'FloatRGBA': 8,
-    'B8G8R8A8': 4
+    'B8G8R8A8(sRGB)': 4
 }
 
 PF_FORMAT = {
@@ -19,7 +19,7 @@ PF_FORMAT = {
     'PF_BC5': 'BC5/ATI2',
     'PF_BC6H': 'BC6H(unsigned)',
     'PF_FloatRGBA': 'FloatRGBA',
-    'PF_B8G8R8A8': 'B8G8R8A8'
+    'PF_B8G8R8A8': 'B8G8R8A8(sRGB)'
 }   
 
 def is_power_of_2(n):
