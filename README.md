@@ -3,15 +3,21 @@
 
 # FF7R-DDS-tools ver0.1.5
 Texture mod tools for FF7R<br>
-<br>
+All you need to do is drop files or folders on batch files.<br>
 
 ## Features
 
 - Inject any size DDS and any number of mipmaps.
 - Export assets as DDS.
 - Remove mipmaps from assets.
-- Accept a folder as input.
-- All you need to do is drop files or folders on batch files.
+
+## Supported Formats
+
+- DXT1
+- BC4/ATI1
+- BC5/ATI2
+- BC6H
+- B8G8R8A8(sRGB)
 
 ## Download
 Download `FF7R-DDS-tools*.zip` from [here](https://github.com/matyalatte/FF7R-DDS-Injector/releases)
@@ -60,14 +66,23 @@ You can inject multiple assets at the same time.
     You can check the format with this batch file.
 
 ## How to Build
-You can build our tool with Github Actions.<br>
+You can build my tool with Github Actions.<br>
 See here for the details.<br>
 [How to Build with Github Actions · matyalatte/FF7R-mesh-importer Wiki](https://github.com/matyalatte/FF7R-mesh-importer/wiki/How-to-Build-with-Github-Actions)
 
 ## FAQ
 
-### I've got the `UE4 requires BC6H(unsigned)` warning. What should I do?
+### Is there any point in removing mipmaps?
+Basically no.<br>
+But there are minor mipmap problems with model mods.<br>
+The removal function will resolve them.
+
+### I got the `UE4 requires BC6H(unsigned)...` warning. What should I do?
 Nothing needs to be done.<br>
 There are two types of BC6H: `signed` and `unsigned`.<br>
 UE4 will use the `unsigned` format.<br>
-But `signed` format will works fine as well.
+But `signed` format will work fine if all pixels have positive values.
+
+### I got the `Mipmaps should have power of 2 as...` warning. What should I do?
+Change its width and height to power of 2.<br>
+Or export dds without mipmaps.
