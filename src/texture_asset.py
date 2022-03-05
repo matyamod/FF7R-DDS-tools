@@ -99,7 +99,7 @@ def get_all_file_path(file, rebase=False, folder=''):
     base_name, ext = os.path.splitext(file)
 
     if ext not in EXT:
-        raise RuntimeError('Not Uasset.')
+        raise RuntimeError('Not Uasset. ({})'.format(file))
 
     return [base_name + ext for ext in EXT]
 
@@ -108,7 +108,7 @@ class TextureUasset:
     def __init__(self, file_path, verbose=False):
 
         if not os.path.isfile(file_path):
-            raise RuntimeError('Not File.')
+            raise RuntimeError('Not File. ({})'.format(file_path))
 
         uasset_name, uexp_name, ubulk_name = get_all_file_path(file_path)
 
@@ -226,7 +226,7 @@ class TextureUasset:
         check(i, len(self.uexp_map_data))
         
         if self.type not in PF_FORMAT:
-            raise RuntimeError('Unsupported format. {}'.format(self.type))
+            raise RuntimeError('Unsupported format. ({})'.format(self.type))
         self.format_name = PF_FORMAT[self.type]
         check(self.size_per_pixel, BYTE_PER_PIXEL[self.format_name])
 

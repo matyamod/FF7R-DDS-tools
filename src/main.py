@@ -87,6 +87,8 @@ def inject_dds(file, save_folder, clear=True):
         uasset_base=uexp_list[0]
     else:
         dds_base = os.path.splitext(os.path.basename(file))[0]
+        if dds_base+'.uexp' not in uexp_list:
+            raise RuntimeError('The same name asset as dds not found. {}'.format(dds_base))
         id = uexp_list.index(dds_base+'.uexp')
         if id<0:
             raise RuntimeError('Uasset Not Found ({})'.format(os.path.join(uasset_folder, dds_base+'.uexp')))
@@ -125,31 +127,35 @@ if __name__=='__main__':
     save_folder = args.save_folder
     mode = args.mode
 
-    if mode=='valid':
-        func = valid
-    elif mode=='copy_uasset':
-        func = copy_uasset
-    elif mode=='inject':
-        func = inject_dds
-    elif mode=='remove_mipmaps':
-        func = remove_mipmaps
-    elif mode=='parse':
-        func = parse
-    elif mode=='export':
-        func = export_as_dds
-    else:
-        raise RuntimeError('Unsupported mode. {}'.format(mode))
-    
-    if os.path.isfile(file):
-        func(file, save_folder)
-    else:
-        folder = file
-        clear=True
-        for f in sorted(os.listdir(folder)):
-            file = os.path.join(folder, f)
-            print(file)
+    try:
+        if mode=='valid':
+            func = valid
+        elif mode=='copy_uasset':
+            func = copy_uasset
+        elif mode=='inject':
+            func = inject_dds
+        elif mode=='remove_mipmaps':
+            func = remove_mipmaps
+        elif mode=='parse':
+            func = parse
+        elif mode=='export':
+            func = export_as_dds
+        else:
+            raise RuntimeError('Unsupported mode. {}'.format(mode))
+        
+        if os.path.isfile(file):
+            func(file, save_folder)
+        else:
+            folder = file
+            clear=True
+            for f in sorted(os.listdir(folder)):
+                file = os.path.join(folder, f)
 
-            if os.path.isfile(file) and (f[-4:]=='uexp' or f[-3:]=='dds'):
-                func(file, save_folder, clear=clear)
-                clear=False
+                if os.path.isfile(file) and (f[-4:]=='uexp' or f[-3:]=='dds'):
+                    func(file, save_folder, clear=clear)
+                    clear=False
+    except Exception as e:
+        print(e)
+        raise RuntimeError(e)
+    print('Success!')
 
