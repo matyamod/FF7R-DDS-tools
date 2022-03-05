@@ -1,0 +1,14 @@
+*__pycache__
+*.exe
+*.dll
+*test*
+*.dds
+*.uasset
+*.uexp
+*.ubulk
+*removed
+*injected
+workspace/*
+!workspace/header
+*.bat
+!bat-*/*.bat

@@ -1,0 +1,92 @@
+name: build
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+  
+env:
+  ZIP_NAME: FF7R-DDS-tools
+  MAIN_PYTHON_FILE: main
+  EXE_NAME: FF7R-DDS-tools
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+    
+      - name: Check tag
+        run: |
+          if [[ ${{ github.ref }} == refs/tags/v* ]]; then
+            VERSION=-$(echo ${{ github.ref }} | sed -e "s#refs/tags/##g")
+          else
+            VERSION=""
+          fi
+          echo "REPO_VERSION=$VERSION" >> $GITHUB_ENV
+        shell: bash
+        
+      - uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+          architecture: 'x64'
+          
+      - name: Install python libs
+        if: steps.pip_cache.outputs.cache-hit != 'true'
+        run: | 
+          python -V
+          pip install wheel
+          pip install nuitka zstandard
+      
+      - name: Build Python
+        run: |
+          nuitka --assume-yes-for-downloads --follow-imports --onefile src/${{ env.MAIN_PYTHON_FILE }}.py
+          
+      - name: Copy files
+        run: |
+          mkdir -p ../release
+          cp ${{ env.MAIN_PYTHON_FILE }}.dist/${{ env.MAIN_PYTHON_FILE }}.exe ../release/${{ env.EXE_NAME}}.exe
+          cp ${{ env.MAIN_PYTHON_FILE }}.dist/python*.dll ../release/
+          cp ./LICENSE ../release/
+          cp ./changelog.txt ../release/
+          cp ./README.md ../release/
+          cp ./bat-exe/*.bat ../release/
+          cp -r ./workspace ../release/
+        shell: bash
+
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          directory: '../release'
+          type: 'zip'
+          filename: '${{ env.ZIP_NAME }}.zip'
+          exclusions: '*.git* .gitignore'
+      
+      - name: Create Release Draft
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          body: |
+            Changelog
+            - First Change
+            - Second Change
+          draft: true
+          prerelease: false
+          
+      - name: Upload Release Asset
+        id: upload-release-asset-exe
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ../release/${{ env.ZIP_NAME }}.zip
+          asset_name: ${{ env.ZIP_NAME }}${{ env.REPO_VERSION }}.zip
+          asset_content_type: application/zip
