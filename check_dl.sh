@@ -1,1 +1,0 @@
-curl https://api.github.com/repos/matyalatte/FF7R-DDS-tools/releases | grep "download_count"

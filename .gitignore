@@ -12,3 +12,5 @@ workspace/*
 !workspace/header
 *.bat
 !bat-*/*.bat
+*sh
+*zip

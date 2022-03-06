@@ -3,7 +3,7 @@
 
 # FF7R-DDS-tools ver0.1.5
 Texture mod tools for FF7R<br>
-All you need to do is drop files or folders on batch files.<br>
+All you need is drop files or folders on batch files.<br>
 
 ## Features
 
