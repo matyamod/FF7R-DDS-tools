@@ -394,6 +394,9 @@ class TextureUasset:
                 self.uexp_map_meta.append(meta)
             i+=1
 
+        if len(self.ubulk_map_meta)==0:
+            self.has_ubulk=False
+
         max_width, max_height = self.get_max_size()
         new_size = (max_width, max_height)
         uexp_map_num, ubulk_map_num = self.get_mipmap_num()
