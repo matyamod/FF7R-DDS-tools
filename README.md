@@ -20,7 +20,7 @@ All you need is drop files or folders on batch files.<br>
 - B8G8R8A8(sRGB)
 
 ## Download
-Download `FF7R-DDS-tools*.zip` from [here](https://github.com/matyalatte/FF7R-DDS-Injector/releases)
+Download `FF7R-DDS-tools*.zip` from [here](https://github.com/matyalatte/FF7R-DDS-tools/releases)
 
 ## Basic Usage
 1. Drop `.uexp` onto `1_copy_uasset*.bat`.<br>
