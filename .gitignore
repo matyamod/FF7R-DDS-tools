@@ -8,8 +8,7 @@
 *.ubulk
 *removed
 *injected
-workspace/*
-!workspace/header
+*workspace
 *.bat
 !bat-*/*.bat
 *sh
