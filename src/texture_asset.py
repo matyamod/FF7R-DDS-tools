@@ -5,19 +5,23 @@ from uasset import Uasset
 # UE4 format: [dds format, byte per pixel]
 BYTE_PER_PIXEL = {
     'DXT1': 0.5,
+    'DXT5/BC3': 1,
     'BC4/ATI1': 0.5,
     'BC5/ATI2': 1,
     'BC6H(unsigned)': 1,
     'BC6H(signed)': 1,
+    'BC7': 1,
     'FloatRGBA': 8,
     'B8G8R8A8(sRGB)': 4
 }
 
 PF_FORMAT = {
     'PF_DXT1': 'DXT1',
+    'PF_DXT5': 'DXT5/BC3',
     'PF_BC4': 'BC4/ATI1',
     'PF_BC5': 'BC5/ATI2',
     'PF_BC6H': 'BC6H(unsigned)',
+    'PF_BC7': 'BC7', 
     'PF_FloatRGBA': 'FloatRGBA',
     'PF_B8G8R8A8': 'B8G8R8A8(sRGB)'
 }   

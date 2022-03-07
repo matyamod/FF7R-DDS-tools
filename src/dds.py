@@ -9,12 +9,14 @@ def get_args():
     return args
 
 DDS_FORMAT = {
-    'DXT1': ['DXT1'],
+    'DXT1': ['DXT1', 71, 72], #DXGI_FORMAT_BC1_TYPELESS
+    'DXT5/BC3': ['DXT5', 77, 78], #DXGI_FORMAT_BC3_TYPELESS	
     'BC4/ATI1': [80, 'ATI1', 'BC4U'], #DXGI_FORMAT_BC4_UNORM
     'BC5/ATI2': [83, 'ATI2', 'BC5U'], #DXGI_FORMAT_BC5_UNORM
     'BC6H(unsigned)': [95], #DXGI_FORMAT_BC6H_UF16
     'BC6H(signed)': [96], #DXGI_FORMAT_BC6H_SF16
-    'FloatRGBA': [], #?
+    'BC7': [98, 99], #	DXGI_FORMAT_BC7_TYPELESS
+    'FloatRGBA': [], #DXGI_FORMAT_R16G16B16A16_FLOAT?
     'B8G8R8A8(sRGB)': [91] #DXGI_FORMAT_B8G8R8A8_UNORM_SRGB
 }
 
@@ -26,11 +28,6 @@ def get_dds_format(form):
 
 class DDS:
     HEADER = b'\x44\x44\x53\x20'
-    #96: BC6H_SF16 (hdr)
-    #83: BC5_UNORM (normal)
-    #80: BC4_UNORM (occ)
-    #DX1: color, mask
-    #10: DXGI_FORMAT_R16G16B16A16_FLOAT (*SkyContext)
     def __init__(self, file, verbose=False, only_header=False):
         if file[-3:]!='dds' and not only_header:
             raise RuntimeError('Not DDS.')
@@ -60,6 +57,7 @@ class DDS:
             else:
                 self.format=self.fourCC
             self.format_name = get_dds_format(self.format)
+
             self.byte_per_pixel = BYTE_PER_PIXEL[self.format_name]
 
             if only_header:
@@ -145,4 +143,3 @@ class DDS:
 
             for d in self.mipmap_data:
                 f.write(d)
-

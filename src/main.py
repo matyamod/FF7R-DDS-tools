@@ -16,8 +16,8 @@ def get_args():
 def parse(file, save_folder, clear=True):
     if file[-3:]=='dds':
         dds = DDS(file, verbose=True)
-        #mkdir('workspace/header')
-        #dds.save('workspace/header/'+dds.format_name.split('/')[0]+'.bin', only_header=True)
+        mkdir('workspace/header')
+        dds.save('workspace/header/'+dds.format_name.split('/')[0]+'.bin', only_header=True)
     else:
         TextureUasset(file, verbose=True)
 
