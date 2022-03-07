@@ -1,39 +1,6 @@
 
 from io_util import *
 
-'''
-FILE HEADER
-  byte {4}       - Unreal Header (193,131,42,158)
-  uint32 {4}     - Version (6) (XOR with 255)
-  byte {16}      - null
-  uint32 {4}     - File size
-  uint32 {4}     - string length (5)
-  byte {5}       - Package Name (None)
-  byte {4}       - ? (0, x, 0, 128)
-  uint32 {4}     - Number of Names
-  uint32 {4}     - Name Directory Offset
-  byte {8}       - null
-  uint32 {4}       - Number Of Exports
-  uint32 {4}       - Exports Directory Offset
-  uint32 {4}       - Number Of Imports
-  uint32 {4}       - Import Directory Offset
-  uint32 {4}       - ?
-  byte {16}        - null
-  byte {16}        - GUID Hash
-  uint32 {4}       - Unknown (1)
-  uint32 {4}       - Unknown
-  uint32 {4}       - Unknown (Number of Names - again?)
-  byte {36}        - null
-  uint32 {4}       - Unknown
-  uint32 {4}       - null
-  uint32 {4}       - Padding Offset
-  uint32 {4}       - File Length [+4] (not always - sometimes an unknown length/offset)
-  byte {12}        - null
-  uint32 {4}       - Unknown (-1)
-  uint32 {4}       - Files Data Offset
-'''
-
-
 class UassetHeader:
     HEAD = b'\xC1\x83\x2A\x9E'
 
@@ -142,20 +109,9 @@ class UassetImport: #28 bytes
         f.write(import_.bin3)
 
     def name_imports(imports, name_list):
-        material_name_list=[]
-        ff7r=False
-        skeletal=False
         for import_ in imports:
             import_.name=name_list[import_.name_id]
             import_.class_name=name_list[import_.class_id]
-            if import_.class_name in ['Material', 'MaterialInstanceConstant']:
-                import_.material=True
-            if import_.class_name=='MaterialInstanceConstant':
-                ff7r=True
-            if import_.class_name=='SkeletalMesh':
-                skeletal=True
-            
-        return ff7r, skeletal
 
     def print(self, padding=2):
         pad=' '*padding
@@ -222,6 +178,7 @@ class UassetExport: #104 bytes
 class Uasset:
 
     def __init__(self, uasset_file, verbose=False):
+        verbose=True
         if uasset_file[-7:]!='.uasset':
             raise RuntimeError('Not .uasset. ({})'.format(uasset_file))
 
@@ -251,7 +208,7 @@ class Uasset:
         self.bin2=f.read(self.header.import_offset-offset)
 
         self.imports=read_array(f, UassetImport.read, len=self.header.import_num)
-        self.ff7r, self.skeletal=UassetImport.name_imports(self.imports, self.name_list)
+        UassetImport.name_imports(self.imports, self.name_list)
         if verbose:
             print('Import')
             for import_ in self.imports:

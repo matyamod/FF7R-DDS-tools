@@ -2,9 +2,8 @@ import os
 from io_util import *
 from uasset import Uasset
 
-# UE4 format: [dds format, byte per pixel]
 BYTE_PER_PIXEL = {
-    'DXT1': 0.5,
+    'DXT1/BC1': 0.5,
     'DXT5/BC3': 1,
     'BC4/ATI1': 0.5,
     'BC5/ATI2': 1,
@@ -16,7 +15,7 @@ BYTE_PER_PIXEL = {
 }
 
 PF_FORMAT = {
-    'PF_DXT1': 'DXT1',
+    'PF_DXT1': 'DXT1/BC1',
     'PF_DXT5': 'DXT5/BC3',
     'PF_BC4': 'BC4/ATI1',
     'PF_BC5': 'BC5/ATI2',
@@ -24,7 +23,7 @@ PF_FORMAT = {
     'PF_BC7': 'BC7', 
     'PF_FloatRGBA': 'FloatRGBA',
     'PF_B8G8R8A8': 'B8G8R8A8(sRGB)'
-}   
+}
 
 def is_power_of_2(n):
     if n==1:
@@ -33,14 +32,14 @@ def is_power_of_2(n):
         return False
     return is_power_of_2(n//2)
 
+#mipmap meta data (size, offset , etc.)
 class MipmapMetadata:
+    UEXP_FLAG=[66817, 32]
     def __init__(self, data_size, offset, size, uexp):
         self.uexp=uexp
         if uexp:
-            self.flag=32
             self.data_size=0
         else:
-            self.flag=66817
             self.data_size=data_size
         self.offset=offset
         self.width=size[0]
@@ -48,14 +47,12 @@ class MipmapMetadata:
         self.pixel_num = self.width*self.height
 
     def read(f, uexp=True):
-        read_const_uint32(f, 1) #Entry Indicator?
-        flag = read_uint32(f)        
+        read_const_uint32(f, 1)    #Entry Indicator?
+        flag = read_uint32(f)      #uexp flag (32:uexp, 66817:ubulk)
+        uexp=flag==MipmapMetadata.UEXP_FLAG[1]
         data_size = read_uint32(f)
         if uexp:
-            check(flag, 32)
             check(data_size, 0)
-        else:
-            check(flag, 66817)
         read_const_uint32(f, data_size)
         offset = read_uint32(f)
         read_null(f)
@@ -73,14 +70,14 @@ class MipmapMetadata:
         print(pad + 'height: {}'.format(self.height))
 
     def to_uexp(self):
-        self.flag=32
         self.data_size=0
         self.uexp=True
 
     def write(self, f, uasset_size):
         new_offset = f.tell() + uasset_size+24
+
         write_uint32(f, 1)
-        write_uint32(f, self.flag)
+        write_uint32(f, MipmapMetadata.UEXP_FLAG[self.uexp])
         write_uint32(f, self.data_size)
         write_uint32(f, self.data_size)
         if self.uexp:
@@ -93,9 +90,6 @@ class MipmapMetadata:
         write_uint32(f, self.height)
 
 EXT = ['.uasset', '.uexp', '.ubulk']
-UNREAL_SIGNATURE = b'\xC1\x83\x2A\x9E'
-UBULK_FLAG = [0, 16384]
-
 def get_all_file_path(file, rebase=False, folder=''):
     if rebase:
         file=os.path.basename(file)
@@ -108,6 +102,8 @@ def get_all_file_path(file, rebase=False, folder=''):
     return [base_name + ext for ext in EXT]
 
 class TextureUasset:
+    UNREAL_SIGNATURE = b'\xC1\x83\x2A\x9E'
+    UBULK_FLAG = [0, 16384]
     
     def __init__(self, file_path, verbose=False):
 
@@ -116,17 +112,10 @@ class TextureUasset:
 
         uasset_name, uexp_name, ubulk_name = get_all_file_path(file_path)
 
-        self.has_ubulk = os.path.exists(ubulk_name)
-
-        #print(uasset_name)
-        #print(uexp_name)
-        #if self.has_ubulk:
-        #    print(ubulk_name)
-
         self.uasset = Uasset(uasset_name)
         if len(self.uasset.exports)!=1:
             raise RuntimeError('Unexpected number of exports')
-        #name_list = uasset.name_list
+
         with open(uasset_name, 'rb') as f:
             self.uasset_size = get_size(f)
 
@@ -164,8 +153,8 @@ class TextureUasset:
             self.max_height = read_uint32(f)
             one = read_uint16(f)
             check(one, 1)
-            ubulk_flag = read_uint16(f) #ubulk flag?
-            check(ubulk_flag, UBULK_FLAG[self.has_ubulk])
+            ubulk_flag = read_uint16(f) #ubulk flag (uexp:0, ubulk:16384)
+            self.has_ubulk=ubulk_flag==TextureUasset.UBULK_FLAG[1]
             
             self.type = read_str(f)
             #check(self.type, name_list[self.type_name_id])
@@ -181,59 +170,59 @@ class TextureUasset:
             map_num = read_uint32(f) #map num ?
             self.uexp_map_num=map_num-self.ubulk_map_num
             
-            #mip map data
+            #read mipmap data
             read_const_uint32(f, 1) #Entry Indicator?
             read_const_uint32(f, 64) #?
-            uexp_map_size = read_uint32(f) #Length of Mipmap Data?
+            uexp_map_size = read_uint32(f) #Length of Mipmap Data
             read_const_uint32(f, uexp_map_size)
             self.offset = read_uint32(f) #Offset to start of Mipmap Data
             read_null(f)
             check(self.offset, self.uasset_size+f.tell())
-            self.uexp_map_data = f.read(uexp_map_size)
+            uexp_map_data = f.read(uexp_map_size)
             self.uexp_max_width=read_uint32(f)
             self.uexp_max_height=read_uint32(f)
             read_const_uint32(f, 1)
             read_const_uint32(f, self.uexp_map_num)
 
-            #mip map meta data
+            #read mipmap meta data
             if self.has_ubulk:
                 self.ubulk_map_meta = [MipmapMetadata.read(f, uexp=False) for i in range(self.ubulk_map_num)]
             self.uexp_map_meta = [MipmapMetadata.read(f, uexp=True) for i in range(self.uexp_map_num)]
-
             
             self.none_name_id = read_uint32(f)
-            #check(name_list[self.none_name_id], 'None')
-            #check(self.unk4, self.unk3-2-self.has_ubulk)
             read_null(f)
             foot=f.read()
 
-            check(foot, UNREAL_SIGNATURE)
+            check(foot, TextureUasset.UNREAL_SIGNATURE)
             check(f.tell()+self.uasset_size-12, end_offset)
 
+        #read ubulk
         if self.has_ubulk:
             with open(ubulk_name, 'rb') as f:
                 size = get_size(f)
-                self.ubulk_data = [f.read(meta.data_size) for meta in self.ubulk_map_meta]
+                self.ubulk_map_data = [f.read(meta.data_size) for meta in self.ubulk_map_meta]
                 check(size, f.tell())
-        
-        pixel_num=0
-        for meta in self.uexp_map_meta:
-            pixel_num += meta.pixel_num
-        
-        self.size_per_pixel = len(self.uexp_map_data)/pixel_num
-        self.uexp_map_data_list = []
-        i=0
-        for meta in self.uexp_map_meta:
-            size = int(meta.pixel_num*self.size_per_pixel)
-            self.uexp_map_data_list.append(self.uexp_map_data[i:i+size])
-            i+=size
-        check(i, len(self.uexp_map_data))
-        
+
+        #get format name
         if self.type not in PF_FORMAT:
             raise RuntimeError('Unsupported format. ({})'.format(self.type))
         self.format_name = PF_FORMAT[self.type]
-        check(self.size_per_pixel, BYTE_PER_PIXEL[self.format_name])
 
+        #pixel_num=0
+        #for meta in self.uexp_map_meta:
+        #    pixel_num += meta.pixel_num        
+        #self.byte_per_pixel = len(uexp_map_data)/pixel_num        
+        self.byte_per_pixel = BYTE_PER_PIXEL[self.format_name]
+
+        #split mipmap data
+        self.uexp_map_data = []
+        i=0
+        for meta in self.uexp_map_meta:
+            size = int(meta.pixel_num*self.byte_per_pixel)
+            self.uexp_map_data.append(uexp_map_data[i:i+size])
+            i+=size
+        check(i, len(uexp_map_data))
+        
         print('load: ' + uasset_name)
         self.print(verbose)
 
@@ -260,7 +249,7 @@ class TextureUasset:
             ubulk_name = None
         
         uexp_map_data_size = 0
-        for d in self.uexp_map_data_list:
+        for d in self.uexp_map_data:
             uexp_map_data_size += len(d)
 
         uexp_map_num, ubulk_map_num = self.get_mipmap_num()
@@ -289,7 +278,7 @@ class TextureUasset:
             write_uint32(f, max_width)
             write_uint32(f, max_height)
             write_uint16(f, 1)
-            write_uint16(f, UBULK_FLAG[self.has_ubulk])
+            write_uint16(f, TextureUasset.UBULK_FLAG[self.has_ubulk])
             write_str(f, self.type)
 
             if self.has_ubulk:
@@ -307,7 +296,7 @@ class TextureUasset:
             write_uint32(f, self.offset)
             write_null(f)
 
-            for d in self.uexp_map_data_list:
+            for d in self.uexp_map_data:
                 f.write(d)
 
             meta = self.uexp_map_meta
@@ -329,12 +318,12 @@ class TextureUasset:
 
             write_uint32(f, self.none_name_id)
             write_null(f)
-            f.write(UNREAL_SIGNATURE)
+            f.write(TextureUasset.UNREAL_SIGNATURE)
             size = f.tell()
 
         if self.has_ubulk:
             with open(ubulk_name, 'wb') as f:
-                for data in self.ubulk_data:
+                for data in self.ubulk_map_data:
                     f.write(data)
 
         
@@ -351,20 +340,16 @@ class TextureUasset:
         self.ubulk_map_num=0
         print('ubulk has been unlinked.')
 
-    def remove_some_uexp_mipmaps(self):
-        self.uexp_map_data_list=self.uexp_map_data_list[3:]
-        self.uexp_map_meta= self.uexp_map_meta[3:]
-
-    def remove_low_res_mipmaps(self):
+    def remove_mipmaps(self):
         uexp_map_num, ubulk_map_num = self.get_mipmap_num()
         old_mipmap_num = uexp_map_num + ubulk_map_num
 
         if self.has_ubulk:
-            self.uexp_map_data_list = [self.ubulk_data[0]]
+            self.uexp_map_data = [self.ubulk_map_data[0]]
             self.uexp_map_meta = [self.ubulk_map_meta[0]]
             self.uexp_map_meta[0].to_uexp()
         else:
-            self.uexp_map_data_list=[self.uexp_map_data_list[0]]
+            self.uexp_map_data=[self.uexp_map_data[0]]
             self.uexp_map_meta=[self.uexp_map_meta[0]]
 
         self.unlink_ubulk()
@@ -372,8 +357,9 @@ class TextureUasset:
         print('  mipmap: {} -> 1'.format(old_mipmap_num))
 
     def inject_dds(self, dds):
-        if dds.format_name.split('(')[0] not in self.format_name:
-            raise RuntimeError('The format does not match. ({}, {})'.format(self.type, dds.format_name))
+        
+        if dds.header.format_name.split('(')[0] not in self.format_name:
+            raise RuntimeError('The format does not match. ({}, {})'.format(self.type, dds.header.format_name))
         
         max_width, max_height = self.get_max_size()
         old_size = (max_width, max_height)
@@ -381,9 +367,9 @@ class TextureUasset:
         old_mipmap_num = uexp_map_num + ubulk_map_num
 
         offset=0
+        self.ubulk_map_data=[]
         self.ubulk_map_meta=[]
-        self.ubulk_data=[]
-        self.uexp_map_data_list=[]
+        self.uexp_map_data=[]
         self.uexp_map_meta=[]
         i=0
         for data, size in zip(dds.mipmap_data, dds.mipmap_size):
@@ -391,10 +377,10 @@ class TextureUasset:
                 meta = MipmapMetadata(len(data), offset, size, False)
                 offset+=len(data)
                 self.ubulk_map_meta.append(meta)
-                self.ubulk_data.append(data)
+                self.ubulk_map_data.append(data)
             else:
                 meta = MipmapMetadata(0,0,size,True)
-                self.uexp_map_data_list.append(data)
+                self.uexp_map_data.append(data)
                 self.uexp_map_meta.append(meta)
             i+=1
 
@@ -409,7 +395,7 @@ class TextureUasset:
         print('dds has been injected.')
         print('  size: {} -> {}'.format(old_size, new_size))
         print('  mipmap: {} -> {}'.format(old_mipmap_num, new_mipmap_num))
-        if dds.format_name=='BC6H(signed)':
+        if dds.header.format_name=='BC6H(signed)':
             print('Warning: UE4 requires BC6H(unsigned) but your dds is BC6H(signed).')
         if new_mipmap_num>1 and (not is_power_of_2(max_width) or not is_power_of_2(max_height)):
             print('Warning: Mipmaps should have power of 2 as its width and height. ({}, {})'.format(self.width, self.height))
@@ -428,18 +414,7 @@ class TextureUasset:
                 meta.print(padding=4)
                 i+=1
 
-        #print('  head: {}'.format(self.head))
         print('  original_width: {}'.format(self.original_width))
         print('  original_height: {}'.format(self.original_height))
-        #print('  id: {}'.format(self.id))
-        #print('  unk: {}'.format(self.unk))
-        #print('  max width: {}'.format(self.max_width))
-        #print('  max height: {}'.format(self.max_height))
         print('  type: {}'.format(self.type))
-        #print('  number of ubulk\'s mip maps: {}'.format(self.ubulk_map_num))
         print('  number of mip maps: {}'.format(self.uexp_map_num + self.ubulk_map_num))
-        #print('  size of mip map data in uexp: {}'.format(len(self.uexp_map_data)))
-        #print('  texture data offset: {}'.format(self.offset))
-        #print('  uexp max width: {}'.format(self.uexp_max_width))
-        #print('  uexp max height: {}'.format(self.uexp_max_height))
-        #print('  number of uexp\'s mip maps: {}'.format(self.uexp_map_num))

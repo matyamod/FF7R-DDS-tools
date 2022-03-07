@@ -3,8 +3,6 @@ from io_util import mkdir, compare
 from texture_asset import TextureUasset, get_all_file_path
 from dds import DDS
 
-file_path = "Texture/PC0000_00_BodyA_A.uasset"
-
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('file', help='.uasset, .uexp, .ubulk, or a folder')
@@ -15,9 +13,9 @@ def get_args():
 
 def parse(file, save_folder, clear=True):
     if file[-3:]=='dds':
-        dds = DDS(file, verbose=True)
-        mkdir('workspace/header')
-        dds.save('workspace/header/'+dds.format_name.split('/')[0]+'.bin', only_header=True)
+        dds = DDS.load(file, verbose=True)
+        #mkdir('workspace/header')
+        #dds.save('workspace/header/'+dds.format_name.split('/')[0]+'.bin', only_header=True)
     else:
         TextureUasset(file, verbose=True)
 
@@ -25,7 +23,7 @@ def valid(file, save_folder, clear=True):
     folder = 'workspace/valid'
     mkdir(folder)
     if file[-3:]=='dds':
-        dds = DDS(file)
+        dds = DDS.load(file)
         new_file=os.path.join(folder, os.path.basename(file))
         dds.save(new_file)
         compare(file, new_file)
@@ -43,13 +41,6 @@ def valid(file, save_folder, clear=True):
             compare(ubulk_name, new_ubulk_name)
             os.remove(new_ubulk_name)
     print('clear: {}'.format(folder))
-
-def unlink_ubluk(file, save_folder, clear=True):
-    texture = TextureUasset(file)
-    texture.unlink_ubulk()
-    texture.remove_some_uexp_mipmaps()
-    new_file=os.path.join(save_folder, os.path.basename(file))
-    texture.save(new_file)
 
 def copy_uasset(file, save_folder, clear=True):
     folder = 'workspace/uasset'
@@ -96,7 +87,7 @@ def inject_dds(file, save_folder, clear=True):
 
     uasset_file = os.path.join(uasset_folder, uasset_base)
     texture = TextureUasset(uasset_file)
-    dds = DDS(file)
+    dds = DDS.load(file)
     texture.inject_dds(dds)
     mkdir(save_folder)
     new_file = os.path.join(save_folder, os.path.basename(uasset_file))
@@ -104,11 +95,7 @@ def inject_dds(file, save_folder, clear=True):
 
 def export_as_dds(file, save_folder, clear=True):
     texture = TextureUasset(file)
-    header = 'workspace/header/'+texture.format_name.split('/')[0]+'.bin'
-    if not os.path.exists(header):
-        raise RuntimeError('Unsupported format. ({})'.format(texture.format_name))
-    dds = DDS(header, only_header=True)
-    dds.inject(texture)
+    dds = DDS.asset_to_DDS(texture)
     mkdir(save_folder)
     new_file=os.path.splitext(os.path.join(save_folder, os.path.basename(file)))[0]+'.dds'
     dds.save(new_file)
@@ -116,7 +103,7 @@ def export_as_dds(file, save_folder, clear=True):
 def remove_mipmaps(file, save_folder, clear=True):
     mkdir(save_folder)
     texture = TextureUasset(file)
-    texture.remove_low_res_mipmaps()
+    texture.remove_mipmaps()
     new_file=os.path.join(save_folder, os.path.basename(file))
     texture.save(new_file)
 
@@ -155,7 +142,7 @@ if __name__=='__main__':
                     func(file, save_folder, clear=clear)
                     clear=False
     except Exception as e:
-        print(e)
+        print('Error: {}'.format(e))
         raise RuntimeError(e)
     print('Success!')
 
