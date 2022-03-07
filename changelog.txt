@@ -1,3 +1,7 @@
+ver 0.1.6
+- Add support for BC7, DXT5/BC3, BC1
+- Remove header files
+
 ver 0.1.5
 - Ignore sign when importing BC6H
 - Add support for B8G8R8A8(sRGB)

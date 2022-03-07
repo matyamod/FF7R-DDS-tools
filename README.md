@@ -1,7 +1,7 @@
 ![build](https://github.com/matyalatte/FF7R-DDS-tools/actions/workflows/build.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-# FF7R-DDS-tools ver0.1.5
+# FF7R-DDS-tools ver0.1.6
 Texture mod tools for FF7R<br>
 All you need is drop files or folders on batch files.<br>
 
@@ -13,11 +13,14 @@ All you need is drop files or folders on batch files.<br>
 
 ## Supported Formats
 
-- DXT1
+- DXT1/BC1
+- DXT5/BC3
 - BC4/ATI1
 - BC5/ATI2
 - BC6H
+- BC7
 - B8G8R8A8(sRGB)
+- FloatRGBA
 
 ## Download
 Download `FF7R-DDS-tools*.zip` from [here](https://github.com/matyalatte/FF7R-DDS-tools/releases)

@@ -178,7 +178,6 @@ class UassetExport: #104 bytes
 class Uasset:
 
     def __init__(self, uasset_file, verbose=False):
-        verbose=True
         if uasset_file[-7:]!='.uasset':
             raise RuntimeError('Not .uasset. ({})'.format(uasset_file))
 
