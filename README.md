@@ -1,7 +1,7 @@
 ![build](https://github.com/matyalatte/FF7R-DDS-tools/actions/workflows/build.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-# FF7R-DDS-tools ver0.1.6
+# FF7R-DDS-tools ver0.1.7
 Texture mod tools for FF7R<br>
 All you need is drop files or folders on batch files.<br>
 
@@ -33,20 +33,10 @@ Download `FF7R-DDS-tools*.zip` from [here](https://github.com/matyalatte/FF7R-DD
    A new asset will be generated in `./injected`.<br>
 
 ## Advanced Usage
-You can inject multiple assets at the same time.
+You can inject multiple assets at the same time.<br>
+See here for the details.<br>
+[Advanced Usage · matyalatte/FF7R-DDS-tools Wiki](https://github.com/matyalatte/FF7R-DDS-tools/wiki/Advanced-Usage)
 
-1. Put texture assets you want to mod in a folder.
-
-2. Put dds images you want to inject in another folder.
-
-3. Rename dds images to the same name as the assets you want to mod.<br>
-   e.g. If you want to inject `sample.dds` into `abc.uasset`, `abc.uexp`, and `abc.ubluk`, rename `sample.dds` to `abc.dds`.
-
-4. Drop the asset folder onto `1_copy_uasset*.bat`.<br>
-   The assets will be copied in `./workspace/uasset`.<br>
-
-5. Drop the dds folder onto `2_inject_dds*.bat`.<br>
-   New assets will be generated in `./injected`.<br>
 
 ## Batch files
 - `1_copy_uasset*.bat`<br>

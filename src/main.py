@@ -175,14 +175,12 @@ if __name__=='__main__':
             if os.path.isfile(file):
                 #if input file is txt (file list)
                 folder, file_list = get_file_list_from_txt(file)
-                clear=True
                 func= [copy_uasset, inject_dds]
                 inject=0
                 for file in file_list:
                     if os.path.isfile(file) and (file[-4:]=='uexp' or file[-3:]=='dds'):
-                        func[inject](folder, file, save_folder, clear=clear)
+                        func[inject](folder, file, save_folder)
                         inject = not inject
-                        clear=False
             else:
                 #if input is a folder
                 folder = file

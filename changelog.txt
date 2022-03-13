@@ -1,3 +1,8 @@
+ver 0.1.7
+- Add support for .DDS
+- Add feature to specify files in txt
+- Bug fix (fixed an error when loading some assets)
+
 ver 0.1.6
 - Add support for BC7, DXT5/BC3, BC1
 - Remove header files
