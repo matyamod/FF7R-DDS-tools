@@ -30,7 +30,8 @@ foo/bar/b/ttt.dds into foo/bar/test/ppp.uexp
 '''
 
 def remove_quotes(l):
-    l=l[:-1]
+    if l[-1]=='\n':
+        l=l[:-1]
     if l in ['', '"']:
         return ''
     if l[0]=='"':

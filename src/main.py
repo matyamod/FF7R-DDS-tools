@@ -178,16 +178,15 @@ if __name__=='__main__':
                 func= [copy_uasset, inject_dds]
                 inject=0
                 for file in file_list:
-                    if os.path.isfile(file) and (file[-4:]=='uexp' or file[-3:]=='dds'):
-                        func[inject](folder, file, save_folder)
-                        inject = not inject
+                    func[inject](folder, file, save_folder)
+                    inject = not inject
             else:
                 #if input is a folder
                 folder = file
                 clear=True
                 folder, file_list = get_file_list_from_folder(file)
                 for file in file_list:
-                    if os.path.isfile(file) and (file[-4:]=='uexp' or file[-3:]=='dds'):
+                    if os.path.isfile(file) and (file[-4:]=='uexp' or file[-3:] in ['dds', 'DDS']):
                         func(folder, file, save_folder, clear=clear)
                         clear=False
 
