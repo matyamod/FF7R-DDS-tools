@@ -33,7 +33,7 @@ class DDSHeader:
     #read header
     def read(f):
         head = f.read(4)             #Magic=='DDS '
-        check(head, DDSHeader.MAGIC)
+        check(head, DDSHeader.MAGIC, msg='Not DDS.')
         read_const_uint32(f, 124)    #Size==124
         f.seek(4,1)                  #Flags
         height = read_uint32(f)      #Height
@@ -43,7 +43,7 @@ class DDSHeader:
         mipmap_num += mipmap_num==0
         f.seek(44, 1)                #Reserved1[11]
         read_const_uint32(f, 32)     #PfSize==32
-        read_const_uint32(f, 4)      #PfFlags==4
+        f.seek(4, 1)                 #PfFlags==4
         fourCC=f.read(4).decode()    #FourCC
         f.seek(40, 1)                #BitCount, BitMask
                                      #Caps, Caps2, ReservedCaps[2], Reserved2
@@ -115,9 +115,9 @@ class DDSHeader:
     def print(self):
         print('  height: {}'.format(self.height))
         print('  width: {}'.format(self.width))
-        print('  mipmap num: {}'.format(self.mipmap_num))
         print('  format: {}'.format(self.format_name))
-        print('  byte per pixel: {}'.format(self.byte_per_pixel))
+        print('  mipmap num: {}'.format(self.mipmap_num))
+        #print('  byte per pixel: {}'.format(self.byte_per_pixel))
 
 class DDS:
     def __init__(self, header, mipmap_data, mipmap_size):
@@ -199,6 +199,10 @@ class DDS:
 
     #save as dds
     def save(self, file):
+        folder = os.path.dirname(file)
+        if folder not in ['.', ''] and not os.path.exists(folder):
+            mkdir(folder)
+            
         with open(file, 'wb') as f:
             #write header
             DDSHeader.write(f, self.header)

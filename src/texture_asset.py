@@ -32,6 +32,15 @@ def is_power_of_2(n):
         return False
     return is_power_of_2(n//2)
 
+EXT = ['.uasset', '.uexp', '.ubulk']
+def get_all_file_path(file):
+    base_name, ext = os.path.splitext(file)
+
+    if ext not in EXT:
+        raise RuntimeError('Not Uasset. ({})'.format(file))
+
+    return [base_name + ext for ext in EXT]
+
 #mipmap meta data (size, offset , etc.)
 class MipmapMetadata:
     UEXP_FLAG=[66817, 32]
@@ -46,7 +55,7 @@ class MipmapMetadata:
         self.height=size[1]
         self.pixel_num = self.width*self.height
 
-    def read(f, uexp=True):
+    def read(f):
         read_const_uint32(f, 1)    #Entry Indicator?
         flag = read_uint32(f)      #uexp flag (32:uexp, 66817:ubulk)
         uexp=flag==MipmapMetadata.UEXP_FLAG[1]
@@ -89,18 +98,6 @@ class MipmapMetadata:
         write_uint32(f, self.width)
         write_uint32(f, self.height)
 
-EXT = ['.uasset', '.uexp', '.ubulk']
-def get_all_file_path(file, rebase=False, folder=''):
-    if rebase:
-        file=os.path.basename(file)
-        file=os.path.join(folder, file)
-    base_name, ext = os.path.splitext(file)
-
-    if ext not in EXT:
-        raise RuntimeError('Not Uasset. ({})'.format(file))
-
-    return [base_name + ext for ext in EXT]
-
 class TextureUasset:
     UNREAL_SIGNATURE = b'\xC1\x83\x2A\x9E'
     UBULK_FLAG = [0, 16384]
@@ -121,29 +118,25 @@ class TextureUasset:
 
         with open(uexp_name, 'rb') as f:
 
+            f.read(1)
             b = f.read(1)
-            check(b, b'\x03')
-            l=b''
-            s=0
-            b=f.read(1)
-            while (b!=b'\x03' and b!=b'\x05'):
-                b2 = f.read(1)
-                l=b''.join([l, b, b2])
-
-                s+=int(b[0])
+            while (b not in [b'\x03', b'\x05']):
+                f.read(1)
                 b = f.read(1)
 
-            self.b=b
-
-            s+=int(b[0])-3
-            
-            self.head=l
+            s = f.tell()
+            f.seek(0)
+            self.head=f.read(s)
             self.original_width = read_uint32(f)
             self.original_height = read_uint32(f)
             self.id = f.read(16)
-            self.unk = f.read(s//2)
-            null = f.read(3)
-            check(null, b'\x00'*3)
+            offset=f.tell()
+            b = f.read(5)
+            while (b!=b'\x00\x00\x00\x00\x01'):
+                b=b''.join([b[1:], f.read(1)])
+            s=f.tell()-offset-1
+            f.seek(offset)
+            self.unk = f.read(s)
             unk = read_uint16_array(f, len=4)
             check(unk, [1,1,1,0])
             self.type_name_id = read_uint32(f)
@@ -162,13 +155,15 @@ class TextureUasset:
             if self.has_ubulk:
                 read_null(f)
                 read_null(f)
-                self.ubulk_map_num = read_uint32(f) #bulk map num?
+                self.ubulk_map_num = read_uint32(f) #bulk map num + unk_map_num
             else:
                 self.ubulk_map_num = 0
 
-            read_null(f)
+            self.unk_map_num=read_uint32(f) #number of some mipmaps in uexp
             map_num = read_uint32(f) #map num ?
+            self.ubulk_map_num-=self.unk_map_num
             self.uexp_map_num=map_num-self.ubulk_map_num
+
             
             #read mipmap data
             read_const_uint32(f, 1) #Entry Indicator?
@@ -186,9 +181,9 @@ class TextureUasset:
 
             #read mipmap meta data
             if self.has_ubulk:
-                self.ubulk_map_meta = [MipmapMetadata.read(f, uexp=False) for i in range(self.ubulk_map_num)]
-            self.uexp_map_meta = [MipmapMetadata.read(f, uexp=True) for i in range(self.uexp_map_num)]
-            
+                self.ubulk_map_meta = [MipmapMetadata.read(f) for i in range(self.ubulk_map_num)]
+            self.uexp_map_meta = [MipmapMetadata.read(f) for i in range(self.uexp_map_num)]
+
             self.none_name_id = read_uint32(f)
             read_null(f)
             foot=f.read()
@@ -244,6 +239,10 @@ class TextureUasset:
         return uexp_map_num, ubulk_map_num
 
     def save(self, file):
+        folder = os.path.dirname(file)
+        if folder not in ['.', ''] and not os.path.exists(folder):
+            mkdir(folder)
+
         uasset_name, uexp_name, ubulk_name = get_all_file_path(file)
         if not self.has_ubulk:
             ubulk_name = None
@@ -255,9 +254,7 @@ class TextureUasset:
         uexp_map_num, ubulk_map_num = self.get_mipmap_num()
 
         with open(uexp_name, 'wb') as f:
-            f.write(b'\x03')
             f.write(self.head)
-            f.write(self.b)
 
             max_width, max_height = self.get_max_size()
 
@@ -265,7 +262,6 @@ class TextureUasset:
             write_uint32(f, max_height)
             f.write(self.id)
             f.write(self.unk)
-            f.write(b'\x00'*3)
             write_uint16_array(f, [1,1,1,0])
             write_uint32(f, self.type_name_id)
             write_null(f)
@@ -284,9 +280,9 @@ class TextureUasset:
             if self.has_ubulk:
                 write_null(f)
                 write_null(f)
-                write_uint32(f, ubulk_map_num)
+                write_uint32(f, ubulk_map_num+self.unk_map_num)
             
-            write_null(f)
+            write_uint32(f, self.unk_map_num)
             write_uint32(f, uexp_map_num + ubulk_map_num)
 
             write_uint32(f, 1)
@@ -416,5 +412,5 @@ class TextureUasset:
 
         print('  original_width: {}'.format(self.original_width))
         print('  original_height: {}'.format(self.original_height))
-        print('  type: {}'.format(self.type))
-        print('  number of mip maps: {}'.format(self.uexp_map_num + self.ubulk_map_num))
+        print('  format: {}'.format(self.type))
+        print('  mipmap num: {}'.format(self.uexp_map_num + self.ubulk_map_num))

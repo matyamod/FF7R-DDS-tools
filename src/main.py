@@ -2,7 +2,9 @@ import os, argparse, shutil
 from io_util import mkdir, compare
 from texture_asset import TextureUasset, get_all_file_path
 from dds import DDS
+from file_list import get_file_list_from_folder, get_file_list_from_txt, get_file_list_rec
 
+#get arguments
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('file', help='.uasset, .uexp, .ubulk, or a folder')
@@ -11,28 +13,44 @@ def get_args():
     args = parser.parse_args()
     return args
 
-def parse(file, save_folder, clear=True):
+#parse dds or uasset
+def parse(folder, file, save_folder, clear=True):
+    file = os.path.join(folder, file)
     if file[-3:]=='dds':
-        dds = DDS.load(file, verbose=True)
-        #mkdir('workspace/header')
-        #dds.save('workspace/header/'+dds.format_name.split('/')[0]+'.bin', only_header=True)
+        DDS.load(file, verbose=True)
     else:
         TextureUasset(file, verbose=True)
 
-def valid(file, save_folder, clear=True):
-    folder = 'workspace/valid'
-    mkdir(folder)
+#check if the tool can read and write a file correctly.
+def valid(folder, file, save_folder, clear=True):
+
+    #make or clear workspace
+    save_folder = 'workspace/valid'
+    if clear and os.path.exists(save_folder):
+        shutil.rmtree(save_folder)
+        print('clear: {}'.format(save_folder))
+    mkdir(save_folder)
+    print('clear: {}'.format(save_folder))
+
+    src_file = os.path.join(folder, file)
+    new_file=os.path.join(save_folder, file)
+    
     if file[-3:]=='dds':
-        dds = DDS.load(file)
-        new_file=os.path.join(folder, os.path.basename(file))
+        #read and write dds
+        dds = DDS.load(src_file)
         dds.save(new_file)
-        compare(file, new_file)
+
+        #compare and remove files
+        compare(src_file, new_file)
         os.remove(new_file)
+
     else:
-        uasset_name, uexp_name, ubulk_name = get_all_file_path(file)
+        #read and write uasset
+        uasset_name, uexp_name, ubulk_name = get_all_file_path(src_file)
         texture = TextureUasset(file, verbose=True)
-        new_file=os.path.join(folder, os.path.basename(file))
         new_uasset_name, new_uexp_name, new_ubulk_name = texture.save(new_file)
+
+        #compare and remove files
         compare(uasset_name, new_uasset_name)
         compare(uexp_name, new_uexp_name)
         os.remove(new_uasset_name)
@@ -40,18 +58,27 @@ def valid(file, save_folder, clear=True):
         if new_ubulk_name is not None:
             compare(ubulk_name, new_ubulk_name)
             os.remove(new_ubulk_name)
-    print('clear: {}'.format(folder))
 
-def copy_uasset(file, save_folder, clear=True):
-    folder = 'workspace/uasset'
-    TextureUasset(file)
-    if clear and os.path.exists(folder):
-        shutil.rmtree(folder)
-        print('clear: {}'.format(folder))
+#copy uasset to workspace
+def copy_uasset(folder, file, save_folder, clear=True):
+    src_file = os.path.join(folder, file)
+    TextureUasset(src_file) #check if the asset can parse
 
-    mkdir(folder)
-    uasset_name, uexp_name, ubulk_name = get_all_file_path(file)
-    new_uasset_name, new_uexp_name, new_ubulk_name = get_all_file_path(file, rebase=True, folder=folder)
+    #make or clear workspace
+    save_folder = 'workspace/uasset'
+    if clear and os.path.exists(save_folder):
+        shutil.rmtree(save_folder)
+        print('clear: {}'.format(save_folder))
+    mkdir(save_folder)
+
+    #copy files
+    uasset_name, uexp_name, ubulk_name = get_all_file_path(src_file)
+    new_file = os.path.join(save_folder, file)    
+    new_uasset_name, new_uexp_name, new_ubulk_name = get_all_file_path(new_file)
+
+    folder = os.path.dirname(new_file)
+    if folder not in ['.', ''] and not os.path.exists(folder):
+        mkdir(folder)
     shutil.copy(uasset_name, new_uasset_name)
     shutil.copy(uexp_name, new_uexp_name)
     print('copy: {} -> {}'.format(uasset_name, new_uasset_name))
@@ -60,54 +87,73 @@ def copy_uasset(file, save_folder, clear=True):
         shutil.copy(ubulk_name, new_ubulk_name)
         print('copy: {} -> {}'.format(ubulk_name, new_ubulk_name))
 
-
-def inject_dds(file, save_folder, clear=True):
-    print(file)
+#inject dds into the asset copied to workspace
+def inject_dds(folder, file, save_folder, clear=True):
     uasset_folder = 'workspace/uasset'
     if not os.path.exists(uasset_folder):
         raise RuntimeError('Uasset Not Found.')
-    file_list = os.listdir(uasset_folder)
+
+    #determine which file should be injected
+    file_list = get_file_list_rec(uasset_folder)
     uexp_list=[]
     for f in file_list:
         if f[-4:]=='uexp':
             uexp_list.append(f)
-
     if len(uexp_list)==0:
         raise RuntimeError('Uasset Not Found.')
     elif len(uexp_list)==1:
         uasset_base=uexp_list[0]
     else:
         dds_base = os.path.splitext(os.path.basename(file))[0]
-        if dds_base+'.uexp' not in uexp_list:
+        uexp_base_list = [os.path.basename(file) for file in uexp_list]
+        if dds_base+'.uexp' not in uexp_base_list:
             raise RuntimeError('The same name asset as dds not found. {}'.format(dds_base))
-        id = uexp_list.index(dds_base+'.uexp')
+        id = uexp_base_list.index(dds_base+'.uexp')
         if id<0:
             raise RuntimeError('Uasset Not Found ({})'.format(os.path.join(uasset_folder, dds_base+'.uexp')))
         uasset_base=uexp_list[id]
 
+    #read uasset
     uasset_file = os.path.join(uasset_folder, uasset_base)
     texture = TextureUasset(uasset_file)
-    dds = DDS.load(file)
+
+    #read and inject dds
+    src_file = os.path.join(folder, file)
+    new_file = os.path.join(save_folder, uasset_base)
+    dds = DDS.load(src_file)
     texture.inject_dds(dds)
-    mkdir(save_folder)
-    new_file = os.path.join(save_folder, os.path.basename(uasset_file))
     texture.save(new_file)
 
-def export_as_dds(file, save_folder, clear=True):
-    texture = TextureUasset(file)
+#export uasset as dds
+def export_as_dds(folder, file, save_folder, clear=True):
+    src_file = os.path.join(folder, file)
+    new_file = os.path.join(save_folder, file)
+    new_file=os.path.splitext(new_file)[0]+'.dds'
+
+    texture = TextureUasset(src_file)
     dds = DDS.asset_to_DDS(texture)
-    mkdir(save_folder)
-    new_file=os.path.splitext(os.path.join(save_folder, os.path.basename(file)))[0]+'.dds'
     dds.save(new_file)
 
-def remove_mipmaps(file, save_folder, clear=True):
-    mkdir(save_folder)
-    texture = TextureUasset(file)
+#remove mipmaps from uasset
+def remove_mipmaps(folder, file, save_folder, clear=True):
+    src_file = os.path.join(folder, file)
+    new_file = os.path.join(save_folder, file)
+    print(save_folder)
+    print(file)
+    print(new_file)
+    texture = TextureUasset(src_file)
     texture.remove_mipmaps()
-    new_file=os.path.join(save_folder, os.path.basename(file))
     texture.save(new_file)
 
+mode_functions = {'valid': valid,
+         'copy_uasset': copy_uasset,
+         'inject': inject_dds,
+         'remove_mipmaps': remove_mipmaps,
+         'parse': parse,
+         'export': export_as_dds,
+         }
 
+#main
 if __name__=='__main__':
     args = get_args()
     file = args.file
@@ -115,32 +161,38 @@ if __name__=='__main__':
     mode = args.mode
 
     try:
-        if mode=='valid':
-            func = valid
-        elif mode=='copy_uasset':
-            func = copy_uasset
-        elif mode=='inject':
-            func = inject_dds
-        elif mode=='remove_mipmaps':
-            func = remove_mipmaps
-        elif mode=='parse':
-            func = parse
-        elif mode=='export':
-            func = export_as_dds
-        else:
+        if mode not in mode_functions:
             raise RuntimeError('Unsupported mode. {}'.format(mode))
-        
-        if os.path.isfile(file):
-            func(file, save_folder)
-        else:
-            folder = file
-            clear=True
-            for f in sorted(os.listdir(folder)):
-                file = os.path.join(folder, f)
+        func = mode_functions[mode]
 
-                if os.path.isfile(file) and (f[-4:]=='uexp' or f[-3:]=='dds'):
-                    func(file, save_folder, clear=clear)
-                    clear=False
+        if os.path.isfile(file) and file[-3:]!='txt':
+            #if input is a file
+            folder = os.path.dirname(file)
+            file = os.path.basename(file)
+            func(folder, file, save_folder)
+            
+        else:
+            if os.path.isfile(file):
+                #if input file is txt (file list)
+                folder, file_list = get_file_list_from_txt(file)
+                clear=True
+                func= [copy_uasset, inject_dds]
+                inject=0
+                for file in file_list:
+                    if os.path.isfile(file) and (file[-4:]=='uexp' or file[-3:]=='dds'):
+                        func[inject](folder, file, save_folder, clear=clear)
+                        inject = not inject
+                        clear=False
+            else:
+                #if input is a folder
+                folder = file
+                clear=True
+                folder, file_list = get_file_list_from_folder(file)
+                for file in file_list:
+                    if os.path.isfile(file) and (file[-4:]=='uexp' or file[-3:]=='dds'):
+                        func(folder, file, save_folder, clear=clear)
+                        clear=False
+
     except Exception as e:
         print('Error: {}'.format(e))
         raise RuntimeError(e)
