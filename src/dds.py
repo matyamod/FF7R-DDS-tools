@@ -127,7 +127,7 @@ class DDS:
 
     #load dds file
     def load(file, verbose=False):
-        if file[-3:]!='dds':
+        if file[-3:] not in ['dds', 'DDS']:
             raise RuntimeError('Not DDS.')
         print('load: ' + file)
         with open(file, 'rb') as f:
@@ -202,7 +202,7 @@ class DDS:
         folder = os.path.dirname(file)
         if folder not in ['.', ''] and not os.path.exists(folder):
             mkdir(folder)
-            
+
         with open(file, 'wb') as f:
             #write header
             DDSHeader.write(f, self.header)

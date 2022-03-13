@@ -16,7 +16,7 @@ def get_args():
 #parse dds or uasset
 def parse(folder, file, save_folder, clear=True):
     file = os.path.join(folder, file)
-    if file[-3:]=='dds':
+    if file[-3:] in ['dds', 'DDS']:
         DDS.load(file, verbose=True)
     else:
         TextureUasset(file, verbose=True)
@@ -35,7 +35,7 @@ def valid(folder, file, save_folder, clear=True):
     src_file = os.path.join(folder, file)
     new_file=os.path.join(save_folder, file)
     
-    if file[-3:]=='dds':
+    if file[-3:] in ['dds', 'DDS']:
         #read and write dds
         dds = DDS.load(src_file)
         dds.save(new_file)
@@ -170,7 +170,7 @@ if __name__=='__main__':
             folder = os.path.dirname(file)
             file = os.path.basename(file)
             func(folder, file, save_folder)
-            
+
         else:
             if os.path.isfile(file):
                 #if input file is txt (file list)
