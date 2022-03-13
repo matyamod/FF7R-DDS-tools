@@ -54,7 +54,6 @@ jobs:
           cp ./changelog.txt ../release/
           cp ./README.md ../release/
           cp ./bat-exe/*.bat ../release/
-          cp -r ./workspace ../release/
         shell: bash
 
       - name: Archive Release
