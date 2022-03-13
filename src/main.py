@@ -186,7 +186,7 @@ if __name__=='__main__':
                 clear=True
                 folder, file_list = get_file_list_from_folder(file)
                 for file in file_list:
-                    if os.path.isfile(file) and (file[-4:]=='uexp' or file[-3:] in ['dds', 'DDS']):
+                    if file[-4:]=='uexp' or file[-3:] in ['dds', 'DDS']:
                         func(folder, file, save_folder, clear=clear)
                         clear=False
 
