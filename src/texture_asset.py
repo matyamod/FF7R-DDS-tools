@@ -172,7 +172,7 @@ class TextureUasset:
             read_const_uint32(f, uexp_map_size)
             self.offset = read_uint32(f) #Offset to start of Mipmap Data
             read_null(f)
-            check(self.offset, self.uasset_size+f.tell())
+            #check(self.offset, self.uasset_size+f.tell())
             uexp_map_data = f.read(uexp_map_size)
             self.uexp_max_width=read_uint32(f)
             self.uexp_max_height=read_uint32(f)
@@ -189,7 +189,7 @@ class TextureUasset:
             foot=f.read()
 
             check(foot, TextureUasset.UNREAL_SIGNATURE)
-            check(f.tell()+self.uasset_size-12, end_offset)
+            #check(f.tell()+self.uasset_size-12, end_offset)
 
         #read ubulk
         if self.has_ubulk:
