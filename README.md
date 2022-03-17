@@ -71,10 +71,10 @@ But there are minor mipmap problems with model mods.<br>
 The removal function will resolve them.
 
 ### I got the `UE4 requires BC6H(unsigned)...` warning. What should I do?
-Nothing needs to be done.<br>
 There are two types of BC6H: `signed` and `unsigned`.<br>
-UE4 will use the `unsigned` format.<br>
-But `signed` format will work fine if all pixels have positive values.
+And you should use the `unsigned` format.<br>
+See here for the details.<br>
+[How to Inject .HDR textures · matyalatte/FF7R-DDS-tools Wiki](https://github.com/matyalatte/FF7R-DDS-tools/wiki/How-to-Inject-.HDR-textures)
 
 ### I got the `Mipmaps should have power of 2 as...` warning. What should I do?
 Change its width and height to power of 2.<br>
